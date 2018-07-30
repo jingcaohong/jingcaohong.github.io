@@ -14,9 +14,9 @@ future: true
 # SNS settings
 RSS: false
 weibo_username:     -洪劲草
-zhihu_username:     huxpro
+#zhihu_username:     huxpro
 github_username:    jingcaohong
-twitter_username:   huxpro
+#twitter_username:   huxpro
 #facebook_username:  huxpro
 #linkedin_username:  firstname-lastname-idxxxx
 
@@ -53,7 +53,7 @@ kramdown:
 
 
 # Disqus settings
-disqus_username: hux
+disqus_username: jingcaohong
 
 # Netease settings
 netease_comment: false
@@ -73,7 +73,7 @@ ga_domain: jingcaohong.github.io
 # Sidebar settings
 sidebar: true                           # whether or not using Sidebar.
 sidebar-about-description: "灵魂与肉体的分离"
-sidebar-avatar: /img/avatar-hux-ny.jpg      # use absolute URL, seeing it's used in both `/` and `/about/`
+sidebar-avatar: /img/sidebar-avatar-jeremyhong.jpg      # use absolute URL, seeing it's used in both `/` and `/about/`
 
 
 
