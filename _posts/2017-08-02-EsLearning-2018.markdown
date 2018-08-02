@@ -4,7 +4,7 @@ title:      "ElasticSearch Learning"
 subtitle:   "Study Notes"
 date:       2018-08-02 17:47:00
 author:     "Jeremyhong"
-header-img: "img/post-bg-ElasticSearchLearning.png"
+header-img: "img/微信图片_20180802230921.jpeg"
 catalog: true
 tags:
     - 学习笔记
