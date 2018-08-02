@@ -92,7 +92,8 @@ json.put("user","kimchy");
 json.put("postDate",new Date());
 json.put("message","trying out Elasticsearch");
 ```
-- Serialize your beans
+- Serialize your beans  
+
 ```
 import com.fasterxml.jackson.databind.*;
 
@@ -101,8 +102,9 @@ ObjectMapper mapper = new ObjectMapper(); // create once, reuse
 
 // generate json
 byte[] json = mapper.writeValueAsBytes(yourbeaninstance);
-```
-- use ElasticSearch Helper
+```  
+- use ElasticSearch Helper  
+
 ```
 import static org.elasticsearch.common.xcontent.XContentFactory.*;
 
