@@ -1,0 +1,185 @@
+---
+layout:     post
+title:      "ElasticSearch Learning"
+subtitle:   "Study Notes"
+date:       2018-08-02 17:47:00
+author:     "Jeremyhong"
+header-img: "img/post-bg-ElasticSearchLearning.png"
+catalog: true
+tags:
+    - 学习笔记
+---
+
+> “自律即自由”
+
+
+## 【ElasticSearch】
+- ### 索引方法
+#### 判断索引是否存在
+```
+IndicesExistsResponse indexResponse = ia.client.admin().indices()
+.prepareExists("blog")
+.excute().actionGet();
+```
+#### 判断类型是否存在
+```
+TypesExistsResponse typeResponse = ia.client.admin().indices()
+.prepareTypesExists("news")
+.setTypes("document")
+.excute().actionGet();
+```
+#### 删除索引
+```
+DeleteIndexResponse deleteResponse = ia.client.admin().indices()
+.prepareDelete("news")
+.excute().actionGet();
+```
+#### 创建索引
+```
+CreateIndexResponse createIndexResponse = ia.client.admin().indices
+.prepareCreate("news")
+.excute().actionGet();
+```
+#### 关闭索引
+关闭不常用的索引可以释放节点和集群的资源
+```
+curl -XPOST "http://127.0.0.1:9200/index/_close"
+```
+
+### Node知识相关
+> Any time that you start an instance of Elasticsearch, you are starting a node. A collection of connected nodes is called a cluster. If you are running a single node of Elasticsearch, then you have a cluster of one node.  
+  
+多个Node组成一个Cluster  
+每个Node能够进行HTTP和Transport传输  
+ 
+#### Master-eligible Node
+控制集群，可当Master-Node使用
+#### Data-Node
+数据节点保存节点，并执行与数据相关的操作，比如CRUD、搜索、聚合
+#### Client node
+不能保存数据也不能当主节点，负责将集群级的请求转发给主节点，并将数据相关的请求（例如搜索）转发到适当的数据节点。
+
+### Transport Client
+Transportclient不加入cluster，通过使用transport模块远程连接到ES cluster。
+```
+// on startup
+
+TransportClient client = TransportClient.builder().build()
+        .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName("host1"), 9300))
+        .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName("host2"), 9300));
+
+// on shutdown
+
+client.close();
+```
+
+## Document APIS
+### Index API
+需要组装成json，可以自行组装也可通过其他方式进行组装。
+
+- Do it yourself  
+```
+String json = "{" +
+        "\"user\":\"kimchy\"," +
+        "\"postDate\":\"2013-01-30\"," +
+        "\"message\":\"trying out Elasticsearch\"" +
+    "}";
+```
+- Using Map
+```
+Map<String, Object> json = new HashMap<String, Object>();
+json.put("user","kimchy");
+json.put("postDate",new Date());
+json.put("message","trying out Elasticsearch");
+```
+- Serialize your beans
+```
+import com.fasterxml.jackson.databind.*;
+
+// instance a json mapper
+ObjectMapper mapper = new ObjectMapper(); // create once, reuse
+
+// generate json
+byte[] json = mapper.writeValueAsBytes(yourbeaninstance);
+```
+- use ElasticSearch Helper
+```
+import static org.elasticsearch.common.xcontent.XContentFactory.*;
+
+XContentBuilder builder = jsonBuilder()
+    .startObject()
+        .field("user", "kimchy")
+        .field("postDate", new Date())
+        .field("message", "trying out Elasticsearch")
+    .endObject()
+```
+#### Index Document
+新增一条document的两种方式
+```
+import static org.elasticsearch.common.xcontent.XContentFactory.*;
+
+IndexResponse response = client.prepareIndex("twitter", "tweet", "1")
+        .setSource(jsonBuilder()
+                    .startObject()
+                        .field("user", "kimchy")
+                        .field("postDate", new Date())
+                        .field("message", "trying out Elasticsearch")
+                    .endObject()
+                  )
+        .get();
+```
+另外一种是json方式，可以不用加id，自动生成。
+### Get API
+根据index，type，id获取json对象
+```
+GetResponse response = client.prepareGet("twitter", "tweet", "1").get();
+```
+### Delete API
+```
+DeleteResponse response = client.prepareDelete("twitter", "tweet", "1").get();
+```
+> 这些（Delete，get）都有线程专用方法setOperationThreaded
+
+### Update API
+UpdateRequest方法
+```
+UpdateRequest updateRequest = new UpdateRequest();
+updateRequest.index("index");
+updateRequest.type("type");
+updateRequest.id("1");
+updateRequest.doc(jsonBuilder()
+        .startObject()
+            .field("gender", "male")
+        .endObject());
+client.update(updateRequest).get();
+```
+prepareUpdate()
+```
+client.prepareUpdate("ttl", "doc", "1")
+        .setScript(new Script("ctx._source.gender = \"male\""  , ScriptService.ScriptType.INLINE, null, null))
+        .get();
+
+client.prepareUpdate("ttl", "doc", "1")
+        .setDoc(jsonBuilder()               
+            .startObject()
+                .field("gender", "male")
+            .endObject())
+        .get();
+```
+Upsert这个方法在官网实在是没看懂，再加上ES主要是搜索引擎，在这边就跳过，以后有遇到再进行补充，暂时不想在这上面浪费太多时间。
+
+### Multi GET API
+```
+MultiGetResponse multiGetItemResponses = client.prepareMultiGet()
+    .add("twitter", "tweet", "1")           
+    .add("twitter", "tweet", "2", "3", "4") 
+    .add("another", "type", "foo")          
+    .get();
+
+for (MultiGetItemResponse itemResponse : multiGetItemResponses) { 
+    GetResponse response = itemResponse.getResponse();
+    if (response.isExists()) {                      
+        String json = response.getSourceAsString(); 
+    }
+}
+```
