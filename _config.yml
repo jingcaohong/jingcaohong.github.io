@@ -14,10 +14,10 @@ future: true
 # SNS settings
 RSS: false
 weibo_username:     u/2933810422
-#zhihu_username:     huxpro
+zhihu_username:     Jeremyhong
 github_username:    jingcaohong
-#twitter_username:   huxpro
-#facebook_username:  huxpro
+twitter_username:   hongjingcao
+facebook_username:  hongjingcao
 #linkedin_username:  firstname-lastname-idxxxx
 
 
@@ -95,16 +95,7 @@ friends: [
     #     title: "Su",
     #     href: "http://su.gallery/"
     # },{
-        title: "乱序",
-        href: "http://mida.re/"
-    },{
-        title: "前端外刊评论",
-        href: "http://qianduan.guru/"
-    },{
-        title: "尹峰以为",
-        href: "http://ingf.github.io/"
-    },{
-        title: "解旻的博客",
-        href: "http://xieminis.me/"
+        title: "Jeremyhong",
+        href: "https://jingcaohong.github.io"
     }
 ]
