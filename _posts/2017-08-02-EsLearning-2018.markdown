@@ -184,4 +184,61 @@ for (MultiGetItemResponse itemResponse : multiGetItemResponses) {
         String json = response.getSourceAsString(); 
     }
 }
+```  
+
+### Bulk API
+单词请求中进行批量增添或者删除document操作
+
 ```
+import static org.elasticsearch.common.xcontent.XContentFactory.*;
+
+BulkRequestBuilder bulkRequest = client.prepareBulk();
+
+// either use client#prepare, or use Requests# to directly build index/delete requests
+bulkRequest.add(client.prepareIndex("twitter", "tweet", "1")
+        .setSource(jsonBuilder()
+                    .startObject()
+                        .field("user", "kimchy")
+                        .field("postDate", new Date())
+                        .field("message", "trying out Elasticsearch")
+                    .endObject()
+                  )
+        );
+
+bulkRequest.add(client.prepareIndex("twitter", "tweet", "2")
+        .setSource(jsonBuilder()
+                    .startObject()
+                        .field("user", "kimchy")
+                        .field("postDate", new Date())
+                        .field("message", "another post")
+                    .endObject()
+                  )
+        );
+
+BulkResponse bulkResponse = bulkRequest.get();
+if (bulkResponse.hasFailures()) {
+    // process failures by iterating through each bulk response item
+}
+```
+
+### BulkProcessor
+这一块感觉不太需要用到
+
+## Search API
+query API example
+```
+SearchResponse response = client.prepareSearch("index1", "index2")
+        .setTypes("type1", "type2")
+        .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
+        .setQuery(QueryBuilders.termQuery("multi", "test"))                 // Query
+        .setPostFilter(QueryBuilders.rangeQuery("age").from(12).to(18))     // Filter
+        .setFrom(0).setSize(60).setExplain(true)
+        .execute()
+        .actionGet();
+```
+  
+上面的选项基本上是可选的，最短可以写成如下这样  
+```
+SearchResponse response = client.prepareSearch().execute().actionGet();
+```
+
