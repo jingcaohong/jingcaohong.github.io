@@ -26,7 +26,7 @@ tags:
 首先是前者的学习,此次重点在于查询方法的api学习，后续会继续学习其他
 ### Java High Level REST Client  
 #### Maven依赖引入
-```
+```xml
 <dependency>
     <groupId>org.elasticsearch.client</groupId>
     <artifactId>elasticsearch-rest-high-level-client</artifactId>
@@ -35,7 +35,7 @@ tags:
 ```  
 
 #### 连接初始化
-```
+```java
 RestClient lowLevelRestClient = RestClient.builder(new HttpHost("localhost",9200,"http")).build();
 RestHighLevelClient client = new RestHighLevelClient(lowLevelRestClient);
 ```  
@@ -44,19 +44,19 @@ RestHighLevelClient client = new RestHighLevelClient(lowLevelRestClient);
 ##### Search request
 提供了查询和聚合查询的功能  
 基本形式如下
-```
+```java
 SearchRequest searchRequest = new SearchRequest();  //构造search request .在这里无参，查询全部索引
 SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();//大多数查询参数要写在searchSourceBuilder里 
 searchSourceBuilder.query(QueryBuilders.matchAllQuery());//增加match_all的条件。
 ```  
 
-```
+```java
 SearchRequest searchRequest = new SearchRequest("posts"); //指定posts索引
 searchRequest.types("doc"); //指定doc类型
 ```
   
 #### 使用SearchSourceBuilder
-```
+```java
 SearchSourceBuilder sourceBuilder = new SearchSourceBuilder(); //构造一个默认配置的对象
 sourceBuilder.query(QueryBuilders.termQuery("user", "kimchy")); //设置查询
 sourceBuilder.from(0); //设置从哪里开始
@@ -64,38 +64,38 @@ sourceBuilder.size(5); //每页5条
 sourceBuilder.timeout(new TimeValue(60, TimeUnit.SECONDS)); //设置超时时间
 ```  
 配置完成后，将其传入searchRequest
-```
+```java
 SearchRequest searchRequest = new SearchRequest();
 searchRequest source(sourceBuilder);
 ```  
 #### 建立查询
 使用构造体构建QueryBuilders对象
-```
+```java
 MatchQueryBuilder matchQueryBuilder = new MatchQueryBuilder("user", "kimchy");
 
 //转化成curl 语句即
 "query": { "match": { "user": "kimchy" } }
 ```  
 相关参数配置
-```
+```java
 matchQueryBuilder.fuzziness(Fuzziness.AUTO);  //是否模糊查询
 matchQueryBuilder.prefixLength(3); //设置前缀长度
 matchQueryBuilder.maxExpansions(10);//设置最大膨胀系数 
 ```  
 可使用QueryBuilders创建,一次性解决
-```
+```java
 QueryBuilder matchQueryBuilder = QueryBuilders.matchQuery("user", "kimchy")
                                                 .fuzziness(Fuzziness.AUTO)
                                                 .prefixLength(3)
                                                 .maxExpansions(10);
 ```  
 然后同样需要放入SearchSourceBuilder里：
-```
+```java
 searchSourceBuilder.query(matchQueryBuilder);
 ```  
 示例代码：   
 **语句**
-```
+```json
 GET /bank/_search?pretty
 {
   "query": {
