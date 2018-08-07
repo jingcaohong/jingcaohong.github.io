@@ -1,0 +1,192 @@
+---
+layout:     post
+title:      "ES JAVA API Learning"
+subtitle:   "Study Notes"
+date:       2018-08-07 18:02:00
+author:     "Jeremyhong"
+header-img: "img/post-bg-universe.jpg"
+catalog: true
+tags:
+    - 学习笔记
+---
+
+> “终于是有点眉目了！”
+
+
+## ElasticSearch Java API
+当前所拥有的api过于混乱，有
+- TransportClient
+- Java High Level REST Client
+- Java Low Level Rest Client  
+现在推荐学习
+- Java High Level REST Client  
+或者
+- [Jest](https://github.com/searchbox-io/Jest/tree/master/jest)  
+
+首先是前者的学习,此次重点在于查询方法的api学习，后续会继续学习其他
+### Java High Level REST Client  
+#### Maven依赖引入
+```
+<dependency>
+    <groupId>org.elasticsearch.client</groupId>
+    <artifactId>elasticsearch-rest-high-level-client</artifactId>
+    <version>5.6.3</version>
+</dependency>
+```  
+
+#### 连接初始化
+```
+RestClient lowLevelRestClient = RestClient.builder(new HttpHost("localhost",9200,"http")).build();
+RestHighLevelClient client = new RestHighLevelClient(lowLevelRestClient);
+```  
+
+#### 查询API
+##### Search request
+提供了查询和聚合查询的功能  
+基本形式如下
+```
+SearchRequest searchRequest = new SearchRequest();  //构造search request .在这里无参，查询全部索引
+SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();//大多数查询参数要写在searchSourceBuilder里 
+searchSourceBuilder.query(QueryBuilders.matchAllQuery());//增加match_all的条件。
+```  
+
+```
+SearchRequest searchRequest = new SearchRequest("posts"); //指定posts索引
+searchRequest.types("doc"); //指定doc类型
+```
+  
+#### 使用SearchSourceBuilder
+```
+SearchSourceBuilder sourceBuilder = new SearchSourceBuilder(); //构造一个默认配置的对象
+sourceBuilder.query(QueryBuilders.termQuery("user", "kimchy")); //设置查询
+sourceBuilder.from(0); //设置从哪里开始
+sourceBuilder.size(5); //每页5条
+sourceBuilder.timeout(new TimeValue(60, TimeUnit.SECONDS)); //设置超时时间
+```  
+配置完成后，将其传入searchRequest
+```
+SearchRequest searchRequest = new SearchRequest();
+searchRequest source(sourceBuilder);
+```  
+#### 建立查询
+使用构造体构建QueryBuilders对象
+```
+MatchQueryBuilder matchQueryBuilder = new MatchQueryBuilder("user", "kimchy");
+
+//转化成curl 语句即
+"query": { "match": { "user": "kimchy" } }
+```  
+相关参数配置
+```
+matchQueryBuilder.fuzziness(Fuzziness.AUTO);  //是否模糊查询
+matchQueryBuilder.prefixLength(3); //设置前缀长度
+matchQueryBuilder.maxExpansions(10);//设置最大膨胀系数 
+```  
+可使用QueryBuilders创建,一次性解决
+```
+QueryBuilder matchQueryBuilder = QueryBuilders.matchQuery("user", "kimchy")
+                                                .fuzziness(Fuzziness.AUTO)
+                                                .prefixLength(3)
+                                                .maxExpansions(10);
+```  
+然后同样需要放入SearchSourceBuilder里：
+```
+searchSourceBuilder.query(matchQueryBuilder);
+```  
+示例代码：   
+**语句**
+```
+GET /bank/_search?pretty
+{
+  "query": {
+    "match": {
+      "firstname": "Virginia"  
+   }
+  }
+}
+```   
+**JAVA代码**
+```java
+@Test
+public void test(){
+    RestClient lowLevelRestClient = RestClient.builder(
+    new HttpHost("172.16.73.50", 9200, "http")).build();
+    RestHighLevelClient client =
+                new RestHighLevelClient(lowLevelRestClient);
+                SearchRequest searchRequest = new SearchRequest("bank");
+    searchRequest.types("account");
+    SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+    MatchQueryBuilder mqb = QueryBuilders.matchQuery("firstname", "Virginia");
+    searchSourceBuilder.query(mqb);
+    searchRequest.source(searchSourceBuilder);
+    try {
+        SearchResponse searchResponse = client.search(searchRequest);
+        System.out.println(searchResponse.toString());
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
+```  
+#### 排序
+SearchSourceBuilder可以添加一种或者多种SortBuilder
+- field
+- score
+- GeoDistance
+- scriptSortBuilder
+```java
+sourceBuilder.sort(new ScoreSortBuilder().order(SortOrder.DESC)); //按照score倒序排列
+sourceBuilder.sort(new FieldSortBuilder("_uid").order(SortOrder.ASC));  //并且按照id正序排列
+```  
+#### ==聚合请求[Exactly what I want !]==
+配置适当的AggregationBuilder并且传入SearchSourceBuilder里  
+通过聚合分组  
+JSON语句  
+```json
+GET /bank/_search?pretty
+{
+  "size": 0,
+  "aggs": {
+    "group_by_state": {
+      "terms": {
+        "field": "state.keyword"
+      }
+    }
+  }
+}
+```  
+将会得到具体的聚合结果，正是我想要的结果
+![结果](http://chuantu.biz/t6/354/1533634846x-1404792987.png)  
+Java实现方式
+```java
+@Test
+public void test(){
+    RestClient lowLevelRestClient = RestClient.builder(
+                new HttpHost("172.16.73.50", 9200, "http")).build();
+    RestHighLevelClient client =
+            new RestHighLevelClient(lowLevelRestClient);
+    SearchRequest searchRequest = new SearchRequest("bank");
+    searchRequest.types("account");
+    TermsAggregationBuilder aggregation = AggregationBuilders.terms("group_by_state")
+            .field("state.keyword");
+    SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+    searchSourceBuilder.aggregation(aggregation);
+    searchSourceBuilder.size(0);
+    searchRequest.source(searchSourceBuilder);
+    try {
+        SearchResponse searchResponse = client.search(searchRequest);
+        System.out.println(searchResponse.toString());
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+    SearchResponse searchResponse = client.search(searchRequest);//同步
+}
+```  
+
+
+
+
+
+
+
+> 参考文献:https://www.jianshu.com/p/5cb91ed22956
+
