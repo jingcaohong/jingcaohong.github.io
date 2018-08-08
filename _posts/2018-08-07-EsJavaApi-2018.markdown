@@ -181,12 +181,161 @@ public void test(){
     SearchResponse searchResponse = client.search(searchRequest);//同步
 }
 ```  
+#### Search Response
+可以看到许多返回信息
+```java
+RestStatus status = searchResponse.status();
+TimeValue took = searchResponse.getTook();
+Boolean terminatedEarly = searchResponse.isTerminatedEarly();
+boolean timedOut = searchResponse.isTimedOut();
+int totalShards = searchResponse.getTotalShards();
+int successfulShards = searchResponse.getSuccessfulShards();
+int failedShards = searchResponse.getFailedShards();
+for (ShardSearchFailure failure : searchResponse.getShardFailures()) {
+    // failures should be handled here
+}
+```   
+#### 取回searchhi，即文档数据
+```java
+//先取回hit
+SearchHits hits = searchResponse.getHits();
+//取回文档
 
+    @Test
+    public void test2(){
+        RestClient lowLevelRestClient = RestClient.builder(
+                new HttpHost("172.16.73.50", 9200, "http")).build();
+        RestHighLevelClient client =
+                new RestHighLevelClient(lowLevelRestClient);
+        SearchRequest searchRequest = new SearchRequest("bank");
+        searchRequest.types("account");
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchRequest.source(searchSourceBuilder);
+        try {
+            SearchResponse searchResponse = client.search(searchRequest);
+            SearchHits searchHits = searchResponse.getHits();
+            SearchHit[] searchHit = searchHits.getHits();
+            for (SearchHit hit : searchHit) {
+                System.out.println(hit.getSourceAsString());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        
+    }
+```  
+还可以根据需要，转换成其他数据类型
+```java
+String sourceAsString = hit.getSourceAsString();
+Map<String,Object> sourceAsMap = hit.getSourceAsMap();
+String documentTitle = (String) sourceAsMap.get("title");
+List<Object> users = (List<Object>) sourceAsMap.get("user");
+Map<String, Object> innerObject = (Map<String, Object>) sourceAsMap.get("innerObject");
+```  
+java实现取数据
+```java
+@Test
+public void test2(){
+    RestClient lowLevelRestClient = RestClient.builder(
+            new HttpHost("172.16.73.50", 9200, "http")).build();
+    RestHighLevelClient client =
+            new RestHighLevelClient(lowLevelRestClient);
+    SearchRequest searchRequest = new SearchRequest("bank");
+    searchRequest.types("account");
+    TermsAggregationBuilder aggregation = AggregationBuilders.terms("group_by_state")
+            .field("state.keyword");
+    SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+    searchSourceBuilder.aggregation(aggregation);
+    searchSourceBuilder.size(0);
+    searchRequest.source(searchSourceBuilder);
+    try {
+        SearchResponse searchResponse = client.search(searchRequest);
+        Aggregations aggs = searchResponse.getAggregations();
+        Terms byStateAggs = aggs.get("group_by_state");
+        Terms.Bucket b = byStateAggs.getBucketByKey("ID"); //只取key是ID的bucket
+        System.out.println(b.getKeyAsString()+","+b.getDocCount());
+        System.out.println("!!!");
+        List<? extends Bucket> aggList = byStateAggs.getBuckets();//获取bucket数组里所有数据
+        for (Bucket bucket : aggList) {
+            System.out.println("key:"+bucket.getKeyAsString()+",docCount:"+bucket.getDocCount());;
+        }
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
+```  
 
-
-
-
-
+#### Search Scroll API
+ES中的分页查询，可以用from、to，但是推荐用Search Scroll  
+带有scroll参数的search请求必须被执行，来初始化scroll session。ES能检测到scroll参数的存在，保证搜索上下文在相应的时间间隔里存活
+```java
+SearchRequest searchRequest = new SearchRequest("account"); //从 account 索引中查询
+SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+searchSourceBuilder.query(matchQuery("first", "Virginia")); //match条件 
+searchSourceBuilder.size(size); //一次取回多少数据
+searchRequest.source(searchSourceBuilder);
+searchRequest.scroll(TimeValue.timeValueMinutes(1L));//设置scroll间隔 
+SearchResponse searchResponse = client.search(searchRequest);
+String scrollId = searchResponse.getScrollId(); //取回这条响应的scroll id,在后续的scroll调用中会用到
+SearchHit[] hits = searchResponse.getHits().getHits();//得到文档数组 
+```  
+接下来，得到的Scroll id 和新的scroll间隔要设置到SearchScrollRequest里，再调用searchScroll方法，ES会返回一批带有新scroll id的查询结果。以此类推，新的scroll id可以用于子查询，来得到另一批新数据。这个过程应该在一个循环内，直到没有数据返回为止,这意味着scroll消耗殆尽，所有匹配上的数据都已经取回。
+```java
+SearchScrollRequest scrollRequest = new SearchScrollRequest(scrollId);  //传入scroll id并设置间隔。
+scrollRequest.scroll(TimeValue.timeValueSeconds(30));
+SearchResponse searchScrollResponse = client.searchScroll(scrollRequest);//执行scroll搜索
+scrollId = searchScrollResponse.getScrollId();  //得到本次scroll id
+```  
+完整示例如下：
+```java
+@Test
+    public void test3(){
+        RestClient lowLevelRestClient = RestClient.builder(
+                new HttpHost("172.16.73.50", 9200, "http")).build();
+        RestHighLevelClient client =
+                new RestHighLevelClient(lowLevelRestClient);
+        SearchRequest searchRequest = new SearchRequest("bank");
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        MatchAllQueryBuilder mqb = QueryBuilders.matchAllQuery();
+        searchSourceBuilder.query(mqb);
+        searchSourceBuilder.size(10); 
+        searchRequest.source(searchSourceBuilder);
+        searchRequest.scroll(TimeValue.timeValueMinutes(1L)); 
+        try {
+            SearchResponse searchResponse = client.search(searchRequest);
+            String scrollId = searchResponse.getScrollId(); 
+            SearchHit[] hits = searchResponse.getHits().getHits();
+            System.out.println("first scroll:");
+            for (SearchHit searchHit : hits) {
+                System.out.println(searchHit.getSourceAsString());
+            }
+            Scroll scroll = new Scroll(TimeValue.timeValueMinutes(1L));
+            System.out.println("loop scroll:");
+            while(hits != null && hits.length>0){
+                SearchScrollRequest scrollRequest = new SearchScrollRequest(scrollId); 
+                scrollRequest.scroll(scroll);
+                searchResponse = client.searchScroll(scrollRequest);
+                scrollId = searchResponse.getScrollId();
+                hits = searchResponse.getHits().getHits();
+                for (SearchHit searchHit : hits) {
+                    System.out.println(searchHit.getSourceAsString());
+                }
+            }
+            ClearScrollRequest clearScrollRequest = new ClearScrollRequest(); 
+            clearScrollRequest.addScrollId(scrollId);
+            ClearScrollResponse clearScrollResponse = client.clearScroll(clearScrollRequest);
+            boolean succeeded = clearScrollResponse.isSucceeded();
+            System.out.println("cleared:"+succeeded);
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } 
+    }
+```  
+#### 总结
+终于是，大概明白了，已经看了两个礼拜左右的ES了，学习效率偏低，主要在于，对官网英文文档阅读吃劲，并且速度太慢没有读完，然后也没再去看。通过搜索博客获得有效资料的速度太慢。总体来说，效率应该再加强一下。  
+  
+  
 
 > 参考文献:https://www.jianshu.com/p/5cb91ed22956
 
