@@ -8,6 +8,7 @@ header-img: "img/post-2018-8-7-markdown.jpg"
 catalog: true
 tags:
     - 学习笔记
+    - Markdown
 ---
 
 > “阮经天有点帅啊”

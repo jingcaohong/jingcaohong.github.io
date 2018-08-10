@@ -8,6 +8,7 @@ header-img: "img/post-bg-ElasticSearchLearning111.png"
 catalog: true
 tags:
     - 学习笔记
+    - ElasticSearch
 ---
 
 > “自律即自由”

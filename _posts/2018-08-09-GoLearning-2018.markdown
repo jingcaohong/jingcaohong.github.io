@@ -8,6 +8,7 @@ header-img: "img/post-bg-kuaidi.jpg"
 catalog: true
 tags:
     - 学习笔记
+    - Go
 ---
 
 > 不要感冒

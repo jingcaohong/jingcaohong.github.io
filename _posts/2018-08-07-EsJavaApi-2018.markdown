@@ -8,6 +8,7 @@ header-img: "img/post-bg-universe.jpg"
 catalog: true
 tags:
     - 学习笔记
+    - ElasticSearch
 ---
 
 > “终于是有点眉目了！”
