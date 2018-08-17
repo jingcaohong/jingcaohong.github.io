@@ -56,7 +56,7 @@ DispatcherServlet在web.xml中配置。
 ```  
 在web.xml中配置WebApplicationContext
 ### 1.2.2 Special Bean Types
-
+  
 Bean type  | Explanation
 -----------|-----------
 HandlerMapping | 将一个请求映射到一个处理程序，以及用于预处理和后处理的拦截器列表。
@@ -66,7 +66,7 @@ ViewResolver|解决从处理程序返回的基于逻辑字符串的视图名称�
 LocaleResolver，LocaleContextResolver|提供国际化视图
 ThemeResolver|处理主题问题
 MultipartResolver|解决多请求问题
-FlashMapManager|存储和检索“输入”和“输出”FlashMap，它可以用来将属性从一个请求传递给另一个请求，通常是通过重定向。  
+FlashMapManager|存储和检索“输入”和“输出”FlashMap，它可以用来将属性从一个请求传递给另一个请求，通常是通过重定向。    
 ### 1.2.3. Web MVC Config
 ### 1.2.4.Servlet Config
 主要是DispatchServlet的配置，可以分别继承
@@ -118,7 +118,7 @@ DispatherServlet会根据请求使用RequestContext.getLocale()方法来获取Lo
 Servlet 3.0 multipart parsing需要通过Servlet容器配置来启用  
 - 在java，需要在Servlet registration设置 MultipartConfigElement
 - 在WEB
-- web.xml，在servlet declaration添加"multipart-config>
+- web.xml，在servlet declaration添加"multipart-config>  
 ```java
 public class AppInitializer extends AbstractAnnotationConfigDispatcherServletInitializer {
 
