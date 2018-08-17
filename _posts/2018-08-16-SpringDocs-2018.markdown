@@ -58,7 +58,7 @@ DispatcherServlet在web.xml中配置。
 ### 1.2.2 Special Bean Types
 
 Bean type  | Explanation
----|---
+-----------|-----------
 HandlerMapping | 将一个请求映射到一个处理程序，以及用于预处理和后处理的拦截器列表。
 HandlerAdapter| 帮助DispatcherServlet调用映射到请求的处理程序，而不管实际调用者是如何调用的  
 HandlerExceptionResolver|处理异常
