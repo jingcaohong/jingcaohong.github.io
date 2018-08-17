@@ -1,0 +1,137 @@
+---
+layout:     post
+title:      "【Spring】Spring MVC Study Notes （一）"
+subtitle:   "Study Notes"
+date:       2018-08-17 10:08:00
+author:     "Jeremyhong"
+header-img: "img/post-bg-universe.jpg"
+catalog: true
+tags:
+    - 学习笔记
+    - Spring
+---
+
+> 坚持，努力赚钱，切切实实实实在在脚踏实地的提升自己的技术，而不是做面子工程，能够掌握一切的感觉真的很棒
+> EveryThing is under control！
+
+
+
+![image](https://images0.cnblogs.com/blog2015/694841/201506/052340331602684.png)
+> 有点兴奋，因为开始啃官方文档了，贼多，但是贼有挑战性，感觉那些博客千篇一律而且不全面，而且说得我都知道了，接下来我是打算很细化的啃下Spring的官方文档，从一级目录Springframework开始，二级目录SpringMVC开始。看完SpringMVC就可以看SPringframework，看完Springframework基本上Spring就没什么了。然后再把Springboot的文档看一遍。然后再看SPringCLOUD,然后再看Spring data flow。看官方文档的要求就是细致，因为我看一遍，leader说一个技术要通过两三本书才能真正掌握。我撸一遍文档，细致性则抵五本书，略过（当然还是认真看，只不过说有的省略选择性）可能抵两三本书，所以心态放对，开始看Doc吧！
+# 1.Spring Web MVC
+## 1.1.Introduction
+## 1.2.DispatcherServlet
+The DispatcherServlet, as any Servlet, needs to be declared and mapped according to the Servlet specification using Java configuration or in web.xml. In turn the DispatcherServlet uses Spring configuration to discover the delegate components it needs for request mapping, view resolution, exception handling.  
+DispatcherServlet在web.xml中配置。  
+可以通过java配置，但是一般使用web.xml配置，下面是一个例子：  
+
+```xml
+<web-app>
+
+    <listener>
+        <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+    </listener>
+
+    <context-param>
+        <param-name>contextConfigLocation</param-name>
+        <param-value>/WEB-INF/app-context.xml</param-value>
+    </context-param>
+
+    <servlet>
+        <servlet-name>app</servlet-name>
+        <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+        <init-param>
+            <param-name>contextConfigLocation</param-name>
+            <param-value></param-value>
+        </init-param>
+        <load-on-startup>1</load-on-startup>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>app</servlet-name>
+        <url-pattern>/app/*</url-pattern>
+    </servlet-mapping>
+
+</web-app>
+```  
+在web.xml中配置WebApplicationContext
+### 1.2.2 Special Bean Types
+
+Bean type  | Explanation
+---|---
+HandlerMapping | 将一个请求映射到一个处理程序，以及用于预处理和后处理的拦截器列表。
+HandlerAdapter| 帮助DispatcherServlet调用映射到请求的处理程序，而不管实际调用者是如何调用的  
+HandlerExceptionResolver|处理异常
+ViewResolver|解决从处理程序返回的基于逻辑字符串的视图名称，以呈现给响应的实际视图
+LocaleResolver，LocaleContextResolver|提供国际化视图
+ThemeResolver|处理主题问题
+MultipartResolver|解决多请求问题
+FlashMapManager|存储和检索“输入”和“输出”FlashMap，它可以用来将属性从一个请求传递给另一个请求，通常是通过重定向。  
+### 1.2.3. Web MVC Config
+### 1.2.4.Servlet Config
+主要是DispatchServlet的配置，可以分别继承
+- WebApplicationInitializer（确保检测到并且自动初始化Servlet3容器）
+- AbstractAnnotationConfigDispatcherServletInitializer（通过简单地覆盖方法来指定servlet映射和DispatcherServlet配置的位置，从而更容易注册DispatcherServlet。）
+- AbstractDispatcherServletInitializer（使用XML的Spring配置）  
+
+### 1.2.5.Processing
+### 1.2.6 Interception 拦截
+可以设置多个HanddlerExceptionResolver，并且分别设置不同的优先级。  
+如果一个exception没有被解决，可以自定义错误页面，在web.xml配置mapping
+```xml
+<error-page>
+    <location>/error</location>
+</error-page>
+```
+这时候需要写一个restcontroller来进行页面转换，实际上也是再通过dispatcherservlet在进行转发。
+```java
+@RestController
+public class ErrorController {
+
+    @RequestMapping(path = "/error")
+    public Map<String, Object> handle(HttpServletRequest request) {
+        Map<String, Object> map = new HashMap<String, Object>();
+        map.put("status", request.getAttribute("javax.servlet.error.status_code"));
+        map.put("reason", request.getAttribute("javax.servlet.error.message"));
+        return map;
+    }
+}
+```
+### 1.2.8.View Resolution
+Spring MVC定义了ViewResolver和视图接口，使您能够在浏览器中呈现模型，而不需要将您绑定到特定的视图技术。ViewResolver提供了视图名称和实际视图之间的映射。视图处理数据的准备工作，然后将其移交给特定的视图技术。
+#### Handling 
+#### Redirecting
+可以给出逻辑视图进行重定向例如：redirect:/myapp/some/resource，或者是直接给个绝对URL例如：redirect:http://myhost.com/some/arbitrary/path
+#### Forwarding
+通过UrlBasedViewResolver和其子类进行解决。直接跳转。 
+### 1.2.9 Locale
+DispatherServlet会根据请求使用RequestContext.getLocale()方法来获取Locale信息。
+#### TimeZone
+可通过RequestContext.getTimeZone()获取
+### 1.2.10 Themes
+不太需要
+### 1.2.11 Multipart resolver
+可以处理多请求，包括多文件上传，需要在DispatcherServlet配置环境中先声明MultipartResolver bean，当有表格类型是multipart/form-data的数据传来，解析器解析内容并将当前HttpServletRequest包装为MultipartHttpServletRequest，以提供对已解析部件的访问，并将其作为请求参数公开。
+#### Apache FileUpload
+使用Apache FileUpload，需要commons-fileupload的依赖，然后一个名字为multipleResolver的CommonsMultipartResolver类型的bean。
+#### Servlet 3.0
+Servlet 3.0 multipart parsing需要通过Servlet容器配置来启用  
+- 在java，需要在Servlet registration设置 MultipartConfigElement
+- 在WEB
+- web.xml，在servlet declaration添加"multipart-config>
+```java
+public class AppInitializer extends AbstractAnnotationConfigDispatcherServletInitializer {
+
+    // ...
+
+    @Override
+    protected void customizeRegistration(ServletRegistration.Dynamic registration) {
+
+        // Optionally also set maxFileSize, maxRequestSize, fileSizeThreshold
+        registration.setMultipartConfig(new MultipartConfigElement("/tmp"));
+    }
+
+}
+```  
+配置完成后，只需要添加一个类型为StandardServletMultipartResolver的bean，bean name设置为multipartResolver
+## 1.3.Filters
